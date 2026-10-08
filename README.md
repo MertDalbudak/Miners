@@ -27,6 +27,26 @@ works offline and can be installed as an app:
 - **Android:** browser menu → *Install app* / *Add to Home screen*
 - **iPhone/iPad (Safari):** Share → *Add to Home Screen*
 
+## Ads (Google AdSense)
+
+Miners uses Google's ad API for HTML5 games (the [Ad Placement API](https://developers.google.com/ad-placement), also called H5 Games Ads):
+
+- **Interstitials** only at natural breaks: when starting a new run, never before the first run of a
+  session and never during play. Google decides whether one is due (at most about every 2 minutes).
+- **Rewarded ad** on the results screen: players can choose to watch an ad to double the coins of the run.
+
+Setup:
+
+1. Copy `.env.example` to `.env.production` and set `VITE_ADSENSE_CLIENT` to your publisher ID
+   (`ca-pub-…`), then `npm run build`. Without an ID nothing is loaded from Google.
+2. The build writes `dist/ads.txt`. It must be reachable at the root of your domain (`https://example.com/ads.txt`).
+3. In AdSense: add and verify your site, make sure games ads (H5 Games Ads) are enabled for your account,
+   keep **Auto ads off** for this site (they would cover the game), and turn on the consent message under
+   **Privacy & messaging** for visitors from the EEA, UK and Switzerland.
+
+`npm run dev` always shows Google's test ads. `VITE_ADS=test` does the same in a production build (useful
+for a staging deploy), and `VITE_ADS=off` turns ads off completely.
+
 ## How it plays
 
 - Dig **left, right and down**, never up. Digging dirt costs 1 energy; ores give energy back.

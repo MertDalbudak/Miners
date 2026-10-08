@@ -503,6 +503,11 @@ export class UI {
       <h3>Graphics</h3>
       ${choice('quality', 'Quality', [['auto', 'Auto'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High']])}
       ${caps.fullscreen ? '<div class="setting"><span class="setting-label">Fullscreen</span><button class="btn small" data-action="fullscreen"><span class="icon">' + Icons.fullscreen + '</span>Toggle</button></div>' : ''}
+      ${caps.privacyChoices ? `<h3>Privacy</h3>
+      <div class="setting">
+        <span class="setting-label">Ad privacy choices<small>Change your consent for personalised ads</small></span>
+        <button class="btn small" data-action="privacy-choices">Open</button>
+      </div>` : ''}
       <h3>Progress</h3>
       <div class="setting">
         <span class="setting-label">Reset progress<small>Coins, upgrades, records and achievements</small></span>
@@ -552,7 +557,12 @@ export class UI {
       </div>`;
   }
 
-  renderAbout() {
+  renderAbout({ ads = false, privacyUrl = '' } = {}) {
+    const adsNote = ads
+      ? `<p class="muted ads-note">Miners is free to play and shows ads from Google. Google and its partners may use cookies to show and measure ads -
+          <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">how Google uses this information</a>.
+          ${privacyUrl ? `<a href="${esc(privacyUrl)}" target="_blank" rel="noopener">Privacy policy</a>` : ''}</p>`
+      : '';
     $('#about-body').innerHTML = `
       <div class="about">
         <div class="logo logo-mid">MINERS</div>
@@ -561,7 +571,42 @@ export class UI {
         <p>Originally made in ${GameInfo.ORIGINAL_YEAR} as a 2D canvas game and rebuilt in 3D in ${GameInfo.REMASTER_YEAR}.</p>
         <p>Rendered with <b>PlayCanvas</b>. Every model, texture and most sounds are generated in code.</p>
         <p class="muted">Works on desktop, tablets and phones, offline too once installed (Add to Home Screen / Install app).</p>
+        ${adsNote}
       </div>`;
+  }
+
+  // ------------------------------------------------------------ rewarded ad
+
+  rewardButton() {
+    return $('#over-panel .reward-btn');
+  }
+
+  showRewardOffer(coins) {
+    const btn = this.rewardButton();
+    if (!btn) return;
+    btn.querySelector('.reward-amount').textContent = `+${fmt(coins)} coins`;
+    btn.disabled = false;
+    btn.hidden = false;
+  }
+
+  setRewardBusy() {
+    const btn = this.rewardButton();
+    if (btn) btn.disabled = true;
+  }
+
+  hideRewardOffer() {
+    const btn = this.rewardButton();
+    if (btn) btn.hidden = true;
+  }
+
+  markCoinsDoubled(extra) {
+    const line = $('#over-panel .over-coins');
+    if (!line) return;
+    const total = Number(line.dataset.total) + extra;
+    line.dataset.total = total;
+    line.querySelector('.over-coins-total').textContent = `+${fmt(total)}`;
+    line.classList.add('doubled');
+    this.bump(line);
   }
 
   // ---------------------------------------------------------------- pause
@@ -611,7 +656,10 @@ export class UI {
       ${badges.length ? `<div class="badges">${badges.join('')}</div>` : ''}
       ${ores.length ? `<div class="ore-row">${ores.join('')}</div>` : ''}
       <p class="over-extra">${extra.map(esc).join(' · ')}</p>
-      <div class="over-coins"><span class="icon coin">${Icons.coin}</span>+${fmt(totalCoins)} coins${parts.length ? `<small>${parts.join(' · ')}</small>` : ''}</div>
+      <div class="over-coins" data-total="${totalCoins}"><span class="icon coin">${Icons.coin}</span><span class="over-coins-total">+${fmt(totalCoins)}</span> coins${parts.length ? `<small>${parts.join(' · ')}</small>` : ''}</div>
+      <button class="btn reward-btn" data-action="watch-ad" hidden>
+        <span data-icon="play"></span><span class="label">Double your coins<small>Watch a short ad · <b class="reward-amount"></b></small></span>
+      </button>
       ${summary.rank ? `<label class="over-name"><span>Name on the scoreboard</span>
         <input type="text" class="name-input" maxlength="10" value="${esc(profile.data.name)}" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Name on the scoreboard"></label>` : ''}
       ${summary.unlocked.length ? `<div class="over-ach"><span class="over-ach-title">New achievements</span>${summary.unlocked.map(a => `<span class="ach-chip" title="${esc(a.desc)}"><span class="icon">${Icons.star}</span>${esc(a.name)}</span>`).join('')}</div>` : ''}

@@ -31,7 +31,18 @@ export class AudioEngine {
     try {
       this.ctx = new AC({ latencyHint: 'interactive' });
     } catch (e) {
-      return false;
+      try {
+        this.ctx = new AC();
+      } catch (err) {
+        return false;
+      }
+    }
+    // iPhone: Web Audio is muted by the ring/silent switch unless the page
+    // asks for media playback (Safari 17+)
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    } catch (e) {
+      // not supported
     }
     const ctx = this.ctx;
     this.master = ctx.createGain();
@@ -48,16 +59,41 @@ export class AudioEngine {
     this.applyVolumes();
     Object.assign(this.buffers, generateSfx(ctx));
 
-    const unlock = () => {
-      if (ctx.state === 'suspended' && !this.paused) ctx.resume();
-      if (ctx.state === 'running') {
-        this.unlocked = true;
-        if (this.musicWanted) this.music.start();
-        for (const ev of ['pointerdown', 'keydown', 'touchend']) window.removeEventListener(ev, unlock, true);
-      }
+    // Audio may only start from a user gesture, and phones stop it again on
+    // calls, app switches or the lock screen. So every gesture makes sure it
+    // runs, and music starts as soon as it does.
+    ctx.addEventListener('statechange', () => this.onStateChange());
+    const onGesture = e => {
+      // a touch only counts as a gesture when it ends
+      if (e.type === 'pointerdown' && e.pointerType !== 'mouse') return;
+      this.unlock();
     };
-    for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, unlock, true);
+    for (const ev of ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click']) {
+      window.addEventListener(ev, onGesture, { capture: true, passive: true });
+    }
     return true;
+  }
+
+  unlock() {
+    const ctx = this.ctx;
+    if (!ctx || this.paused || ctx.state === 'running' || ctx.state === 'closed') return;
+    // a silent sound started inside the gesture wakes up iOS audio
+    try {
+      const source = ctx.createBufferSource();
+      source.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch (e) {
+      // ignore
+    }
+    const resumed = ctx.resume();
+    if (resumed && resumed.then) resumed.then(() => this.onStateChange(), () => {});
+  }
+
+  onStateChange() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    this.unlocked = true;
+    if (this.musicWanted) this.music.start();
   }
 
   async loadFiles() {
@@ -136,6 +172,10 @@ export class AudioEngine {
 
   resume() {
     this.paused = false;
-    if (this.ctx && this.ctx.state === 'suspended' && this.unlocked) this.ctx.resume();
+    const ctx = this.ctx;
+    if (!ctx || !this.unlocked || ctx.state === 'running' || ctx.state === 'closed') return;
+    // may need a gesture on phones - then the next tap resumes it
+    const resumed = ctx.resume();
+    if (resumed && resumed.catch) resumed.catch(() => {});
   }
 }

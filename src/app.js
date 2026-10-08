@@ -8,6 +8,7 @@ import { WorldView } from './render/world-view.js';
 import { Game } from './game/game.js';
 import { Profile } from './game/profile.js';
 import { AudioEngine } from './audio/audio.js';
+import { Ads } from './ads/ads.js';
 import { UI } from './ui/ui.js';
 import { Input } from './ui/input.js';
 import { dailySeed } from './core/rng.js';
@@ -27,6 +28,10 @@ export class App {
     this.profile = new Profile();
     this.settings = this.profile.settings;
     this.audio = new AudioEngine();
+    this.ads = new Ads({ onAdStart: () => this.onAdStart(), onAdEnd: () => this.onAdEnd() });
+    this.finishedRuns = 0;
+    this.adBusy = false;
+    this.rewardOffer = null;
     this.ui = new UI(this);
     this.state = 'loading';
     this.game = null;
@@ -46,6 +51,7 @@ export class App {
   async boot() {
     this.ui.setLoading(0.03, 'Preparing the mine…');
     this.audio.init();
+    this.ads.init();
     this.applyAudioSettings();
     try {
       await Promise.race([document.fonts.load('40px "Lilita One"'), wait(2000)]);
@@ -84,7 +90,7 @@ export class App {
 
     this.audio.loadFiles();
     this.ui.renderHowTo(this.isTouch());
-    this.ui.renderAbout();
+    this.ui.renderAbout({ ads: this.ads.enabled, privacyUrl: import.meta.env.VITE_PRIVACY_URL || '' });
     this.newGame('normal');
     this.goToTitle(true);
 
@@ -104,6 +110,7 @@ export class App {
 
   caps() {
     return {
+      privacyChoices: this.ads.hasPrivacyOptions,
       vibrate: typeof navigator.vibrate === 'function',
       fullscreen: !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)
     };
@@ -284,6 +291,71 @@ export class App {
     const coins = results.coins.total + summary.unlocked.reduce((sum, a) => sum + a.coins, 0) +
       this.runAchievements.reduce((sum, a) => sum + a.coins, 0);
     if (coins > 0) this.ui.toast('Run saved', `+${coins} coins banked`, 'coin');
+    this.finishedRuns++;
+  }
+
+  // ------------------------------------------------------------------ ads
+
+  // Starts a run, after an interstitial if Google has one due. Never before
+  // the first run of a session, and never in the middle of a run.
+  async startAfterAd(type, name, start) {
+    if (this.adBusy) return;
+    this.adBusy = true;
+    try {
+      if (this.finishedRuns > 0) await this.ads.interstitial(type, name);
+    } finally {
+      this.adBusy = false;
+    }
+    start();
+  }
+
+  // Results screen: watch a rewarded ad to double the coins of this run
+  offerDoubleCoins(results) {
+    const coins = results.coins.total;
+    if (!this.ads.available || coins < 5) return;
+    const offer = { coins, show: null, granted: false };
+    this.rewardOffer = offer;
+    this.ads.reward('double-coins', {
+      onOffer: show => {
+        if (this.rewardOffer !== offer || this.state !== 'over') return;
+        offer.show = show;
+        this.ui.showRewardOffer(coins);
+      },
+      onReward: () => {
+        if (offer.granted) return;
+        offer.granted = true;
+        this.profile.data.coins += coins;
+        this.profile.save();
+      }
+    }).then(() => {
+      if (this.rewardOffer !== offer) return;
+      offer.show = null;
+      this.ui.hideRewardOffer();
+      if (offer.granted && this.state === 'over') {
+        this.ui.markCoinsDoubled(coins);
+        this.ui.toast('Coins doubled!', `+${coins} coins`, 'coin');
+        this.audio.play('chest');
+      }
+    });
+  }
+
+  watchRewardAd() {
+    const offer = this.rewardOffer;
+    if (!offer || !offer.show) return;
+    const show = offer.show;
+    offer.show = null;
+    this.ui.setRewardBusy();
+    show();
+  }
+
+  onAdStart() {
+    if (this.state === 'playing') this.pause();
+    this.input.releaseAll();
+    this.audio.suspend();
+  }
+
+  onAdEnd() {
+    if (!document.hidden) this.audio.resume();
   }
 
   renameScore(rank, name) {
@@ -323,6 +395,8 @@ export class App {
     this.ui.setSkipHint(false);
     this.ui.renderGameOver(results, summary, this.profile);
     this.ui.setScreen('over');
+    this.finishedRuns++;
+    this.offerDoubleCoins(results);
     if (summary.unlocked.length) setTimeout(() => this.audio.play('achievement'), 500);
     this.audio.setMusicStyle(MENU_MUSIC);
     this.audio.setIntensity(0.1);
@@ -380,19 +454,29 @@ export class App {
     if (!quiet.includes(action)) this.audio.play('click');
     switch (action) {
       case 'play':
-        this.startRun('normal');
+        this.startAfterAd('start', 'play', () => this.startRun('normal'));
         break;
       case 'daily':
-        this.startRun('daily');
+        this.startAfterAd('start', 'daily', () => this.startRun('daily'));
         break;
       case 'retry':
-        this.newGame(this.mode);
-        this.startRun(this.mode);
+        this.startAfterAd('next', 'retry', () => {
+          this.newGame(this.mode);
+          this.startRun(this.mode);
+        });
         break;
       case 'restart':
         this.bankAbandonedRun();
-        this.newGame(this.mode);
-        this.startRun(this.mode);
+        this.startAfterAd('next', 'restart', () => {
+          this.newGame(this.mode);
+          this.startRun(this.mode);
+        });
+        break;
+      case 'watch-ad':
+        this.watchRewardAd();
+        break;
+      case 'privacy-choices':
+        this.ads.showPrivacyOptions();
         break;
       case 'quit':
         this.bankAbandonedRun();
@@ -531,7 +615,7 @@ export class App {
     if (document.hidden) {
       this.pause();
       this.audio.suspend();
-    } else {
+    } else if (!this.ads.showing) {
       this.audio.resume();
     }
   }

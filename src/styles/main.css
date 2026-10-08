@@ -29,6 +29,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -1214,6 +1218,35 @@ body.touch-on .hint {
   font-weight: 700;
   font-size: 12px;
   color: var(--dim);
+}
+
+.over-coins.doubled {
+  color: #7DF0B8;
+}
+
+.btn.reward-btn {
+  align-self: center;
+  min-width: min(300px, 100%);
+  background: linear-gradient(180deg, #45CFAE 0%, #24A385 100%);
+  box-shadow:
+    0 5px 0 #146B58,
+    0 9px 18px rgba(0, 0, 0, 0.38),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: 0 2px 0 rgba(10, 60, 50, 0.45);
+}
+
+.btn.reward-btn:active {
+  box-shadow: 0 1px 0 #146B58, 0 3px 8px rgba(0, 0, 0, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn.reward-btn b {
+  color: #FFF6C8;
+}
+
+.ads-note a,
+.about a {
+  color: var(--accent);
+  pointer-events: auto;
 }
 
 .over-name {
