@@ -7,7 +7,7 @@ import * as pc from 'playcanvas';
 import { GameConfig } from '../config.js';
 import { cellY } from './blocks-view.js';
 
-const SHAFT_WIDTH = GameConfig.COLS + 0.9;
+const SHAFT_WIDTH = GameConfig.COLS + 0.6;
 
 function damp(current, target, lambda, dt) {
   return target + (current - target) * Math.exp(-lambda * dt);
@@ -102,7 +102,7 @@ export class CameraRig {
       this.targetLook.set(-3.4 + sway * 0.4, 1.9, -3.5);
     } else {
       // keep the headframe and the miner in view on narrow screens
-      dist = Math.max(17, 11.5 / (2 * tanHalf * aspect));
+      dist = Math.max(17, (GameConfig.COLS + 2.5) / (2 * tanHalf * aspect));
       this.targetLook.set(sway * 0.3, aspect < 0.8 ? 0.9 : 1.6, -3);
     }
     const dx = 0.13 + sway * 0.05;

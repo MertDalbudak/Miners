@@ -66,6 +66,37 @@ export class WorldView {
     this.haloMi = haloMi;
     this.app.root.addChild(this.halo);
 
+    // Flames of the torches on screen. Drawn here instead of with the blocks so
+    // each one can fade in and out with the light that reaches it.
+    this.torchFires = [];
+    const fireMi = (entity, mesh, material) => {
+      const mi = new pc.MeshInstance(this.r.models.get(mesh), this.r.materials.get(material), entity);
+      mi.mask = Mask.PLAYFIELD;
+      return mi;
+    };
+    for (let i = 0; i < 3; i++) {
+      const root = new pc.Entity(`torchFire${i}`);
+      const flame = fireMi(root, 'torchFlame', 'torchFlame');
+      const core = fireMi(root, 'torchCore', 'torchCore');
+      root.addComponent('render', { meshInstances: [flame, core] });
+      const halo = new pc.Entity('glow');
+      const glow = fireMi(halo, 'haloQuad', 'torchHalo');
+      halo.addComponent('render', { meshInstances: [glow] });
+      halo.setLocalPosition(0, 0.26, 0.9);
+      root.addChild(halo);
+      // a small warm light so the torch's own block looks lit
+      const light = new pc.Entity('light');
+      light.addComponent('light', {
+        type: 'omni', color: new pc.Color(1, 0.62, 0.28), intensity: 0, range: 1.5,
+        falloffMode: pc.LIGHTFALLOFF_LINEAR, castShadows: false, affectDynamic: true, affectLightmapped: false, bake: false
+      });
+      light.setLocalPosition(0, 0.26, 0.95);
+      root.addChild(light);
+      root.enabled = false;
+      this.app.root.addChild(root);
+      this.torchFires.push({ root, flame, core, halo, glow, light });
+    }
+
     this.magmaLights = [];
     for (let i = 0; i < 4; i++) {
       const e = new pc.Entity(`magma${i}`);
@@ -400,6 +431,7 @@ export class WorldView {
     this.flash.enabled = this.flashLevel > 0.01;
 
     this.updateMagmaLights();
+    this.updateTorches(dt, reveal);
 
     // ---- visible blocks
     const [top, bottom] = rig.visibleRows();
@@ -471,6 +503,45 @@ export class WorldView {
       e.enabled = true;
       e.setPosition(cellX(m.c), cellY(m.r), 0.9);
       e.light.intensity = 1.6 + Math.sin(this.time * 3 + m.c * 1.7 + m.r) * 0.3;
+    });
+  }
+
+  // Torch flames light nothing around them and are only seen where light
+  // reaches them (the reveal or the miner's lamp), like every other block.
+  updateTorches(dt, reveal) {
+    const game = this.game;
+    const t = this.time;
+    const flicker = 0.86 + 0.08 * Math.sin(t * 17.3) + 0.06 * Math.sin(t * 29.1 + 1.3);
+    const [top, bottom] = this.r.cameraRig.visibleRows();
+    const torches = [];
+    for (let r = Math.max(S, top); r <= bottom; r++) {
+      const row = game.grid.rows.get(r);
+      if (!row) continue;
+      for (let c = 0; c < GameConfig.COLS; c++) {
+        if (row.type[c] === B.TORCH) {
+          const x = cellX(c);
+          const y = cellY(r);
+          torches.push({ x, y, d: Math.hypot(x - this.player.x, y - this.player.y) });
+        }
+      }
+    }
+    torches.sort((a, b) => a.d - b.d);
+    const range = this.r.lampRange;
+    this.torchFires.forEach((f, i) => {
+      const torch = torches[i];
+      const lamp = torch ? Math.min(1, Math.max(0, (range - torch.d) / (range * 0.45))) * this.lampOn : 0;
+      const v = torch ? Math.max(reveal, lamp) : 0;
+      f.root.enabled = v > 0.02;
+      if (!f.root.enabled) return;
+      f.root.setPosition(torch.x, torch.y, 0);
+      const k = v * flicker;
+      f.flame.setParameter('material_emissiveIntensity', 1.8 * k);
+      f.core.setParameter('material_emissiveIntensity', 2.4 * k);
+      f.glow.setParameter('material_emissiveIntensity', 0.4 * k);
+      f.light.light.intensity = 1.5 * k;
+      const size = 1.05 + 0.04 * Math.sin(t * 2.3 + i);
+      f.halo.setLocalScale(size, size, size);
+      if (v > 0.6 && Math.random() < dt * 3) this.fx.ember(torch.x, torch.y + 0.44);
     });
   }
 

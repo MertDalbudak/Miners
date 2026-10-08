@@ -216,9 +216,10 @@ export class BlocksView {
         add('tntFuse', 'fuse', 0);
         break;
       case B.TORCH:
-        add('cube', soil);
+        add('cube', ore);
+        add('torchSconce', 'darkmetal', 0);
         add('torchStick', 'plainwood', 0);
-        add('torchHead', 'cloth', 0);
+        add('torchHead', 'clothDark', 0);
         break;
       case B.PICKAXE:
         add('cube', soil);

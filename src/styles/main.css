@@ -337,6 +337,7 @@ input:focus-visible {
 .screen.active .seg,
 .screen.active .switch,
 .screen.active .link,
+.screen.active .panel,
 .screen.active .page-body {
   pointer-events: auto;
 }
@@ -1082,6 +1083,12 @@ body.touch-on .hint {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   text-align: center;
   touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel > * {
+  flex-shrink: 0;
 }
 
 .panel.wide {
@@ -1227,29 +1234,42 @@ body.touch-on .hint {
 
 .over-ach {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
-  text-align: left;
 }
 
-.ach-line {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 8px;
+.over-ach-title {
+  flex-basis: 100%;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ach-chip {
+  display: inline-flex;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: rgba(255, 206, 75, 0.1);
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 206, 75, 0.12);
+  border: 1px solid rgba(255, 206, 75, 0.3);
+  font-weight: 800;
+  font-size: 13px;
 }
 
-.ach-line .icon {
-  grid-row: span 2;
+.ach-chip .icon {
   color: var(--accent);
 }
 
-.ach-line small {
-  color: var(--muted);
-  font-weight: 700;
+.over-panel .row {
+  position: sticky;
+  bottom: -22px;
+  margin: 6px -22px -22px;
+  padding: 12px 22px 22px;
+  background: linear-gradient(180deg, rgba(26, 14, 5, 0), rgba(26, 14, 5, 0.96) 28%);
 }
 
 .row {
@@ -1332,6 +1352,7 @@ body.touch-on .hint {
   overflow-y: auto;
   padding: 2px 2px calc(var(--safe-bottom) + 24px);
   touch-action: pan-y;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   user-select: text;
 }

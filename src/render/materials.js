@@ -90,6 +90,9 @@ export class MaterialLibrary {
     this.std('darkmetal', { color: '#4A4F57', gloss: 0.5, metalness: 0.8 });
     this.std('rust', { color: '#6F5847', gloss: 0.35, metalness: 0.55 });
     this.std('cloth', { color: '#C9A46A', gloss: 0.1 });
+    this.std('clothDark', { color: '#5A3A22', gloss: 0.1 });
+    this.std('torchFlame', { color: '#000000', emissive: '#FF8A2A', emissiveIntensity: 2.4, unlit: true, cull: false });
+    this.std('torchCore', { color: '#000000', emissive: '#FFF0B0', emissiveIntensity: 3.2, unlit: true, cull: false });
     this.std('flare', { color: '#E23B2E', gloss: 0.45 });
     this.std('white', { color: '#F2EFE8', gloss: 0.4 });
     this.std('hat', { color: '#FFB82E', gloss: 0.65 });
@@ -202,6 +205,12 @@ export class MaterialLibrary {
     halo.cull = pc.CULLFACE_NONE;
     halo.update();
     this.m.halo = halo;
+
+    const torchHalo = halo.clone();
+    torchHalo.name = 'torchHalo';
+    torchHalo.emissive = new pc.Color(1, 0.55, 0.18);
+    torchHalo.update();
+    this.m.torchHalo = torchHalo;
   }
 
   buildOverlayMaterials() {

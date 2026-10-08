@@ -614,7 +614,7 @@ export class UI {
       <div class="over-coins"><span class="icon coin">${Icons.coin}</span>+${fmt(totalCoins)} coins${parts.length ? `<small>${parts.join(' · ')}</small>` : ''}</div>
       ${summary.rank ? `<label class="over-name"><span>Name on the scoreboard</span>
         <input type="text" class="name-input" maxlength="10" value="${esc(profile.data.name)}" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Name on the scoreboard"></label>` : ''}
-      ${summary.unlocked.length ? `<div class="over-ach">${summary.unlocked.map(a => `<div class="ach-line"><span class="icon">${Icons.star}</span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></div>`).join('')}</div>` : ''}
+      ${summary.unlocked.length ? `<div class="over-ach"><span class="over-ach-title">New achievements</span>${summary.unlocked.map(a => `<span class="ach-chip" title="${esc(a.desc)}"><span class="icon">${Icons.star}</span>${esc(a.name)}</span>`).join('')}</div>` : ''}
       <div class="row">
         <button class="btn" data-action="menu">Menu</button>
         <button class="btn" data-action="shop-from-over"><span data-icon="pickaxe"></span>Upgrades</button>

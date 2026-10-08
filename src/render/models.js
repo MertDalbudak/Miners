@@ -5,7 +5,7 @@
 
 import * as pc from 'playcanvas';
 import { Rng } from '../core/rng.js';
-import { geo, append, merge, trs, prim, toMesh, roundedBox, rock, crystal, flatten } from './geometry.js';
+import { geo, append, merge, trs, prim, toMesh, roundedBox, rock, crystal, flatten, teardrop } from './geometry.js';
 
 const VARIANTS = 3;
 
@@ -126,9 +126,18 @@ export class ModelLibrary {
   }
 
   buildItems() {
-    // Torch stuck into the dirt, unlit
-    this.add('torchStick', merge([[prim.cylinder(0.035, 0.55, 8), trs(0.04, 0.02, 0.42, 55, 0, -25)]]));
-    this.add('torchHead', merge([[prim.cylinder(0.07, 0.15, 10), trs(0.13, 0.2, 0.64, 55, 0, -25)]]));
+    // Torch: a burning torch in an iron sconce
+    const sconce = geo();
+    append(sconce, prim.box(0.065, 0.1, 0.02), trs(0, -0.26, 0.505));
+    append(sconce, prim.box(0.025, 0.025, 0.1), trs(0, -0.24, 0.58));
+    append(sconce, prim.torus(0.016, 0.062, 14, 6), trs(0, -0.21, 0.665));
+    this.add('torchSconce', sconce);
+    const tilt = trs(0, -0.15, 0.665, 18, 0, 0);
+    this.add('torchStick', merge([[prim.cylinder(0.042, 0.5, 10), tilt]]));
+    this.add('torchHead', merge([[prim.cylinder(0.072, 0.15, 12), tilt.clone().mul(trs(0, 0.24, 0))]]));
+    const flameT = tilt.clone().mul(trs(0, 0.27, 0));
+    this.add('torchFlame', merge([[teardrop(0.115, 0.4), flameT]]));
+    this.add('torchCore', merge([[teardrop(0.062, 0.24), flameT.clone().mul(trs(0, 0.01, 0.05))]]));
 
     // Pickaxe: wooden handle with a curved iron head
     const head = geo();

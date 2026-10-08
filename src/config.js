@@ -10,9 +10,9 @@ export const GameInfo = {
 };
 
 export const GameConfig = {
-  COLS: 9,
+  COLS: 11,
   SURFACE_ROWS: 2,        // rows 0..1 are sky, row 2 is the first diggable row
-  START_COL: 4,
+  START_COL: 5,
 
   // Energy (the original game called these "gems")
   START_ENERGY: 10,

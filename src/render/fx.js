@@ -211,6 +211,14 @@ export class Effects {
     }
   }
 
+  ember(x, y) {
+    this.p.spark({
+      x: x + rand(-0.05, 0.05), y, z: 0.82,
+      vx: rand(-0.15, 0.15), vy: rand(0.5, 1.1), size: rand(0.02, 0.045), size1: 0.005,
+      life: rand(0.5, 1), drag: 1, color: hexColor('#FFD27A'), color1: hexColor('#FF5A1F'), alpha: 1.8, fadePow: 1.5
+    });
+  }
+
   glint(x, y, color) {
     this.p.spark({
       x: x + rand(-0.3, 0.3), y: y + rand(-0.3, 0.3), z: 0.75,

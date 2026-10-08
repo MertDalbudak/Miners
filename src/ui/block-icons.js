@@ -177,14 +177,28 @@ const painters = {
   },
   [B.TORCH]: (ctx, s) => {
     block(ctx, s, ...SOIL);
-    ctx.save();
-    ctx.translate(s * 0.5, s * 0.55);
-    ctx.rotate(-0.4);
+    // glow
+    const glow = ctx.createRadialGradient(s * 0.5, s * 0.38, 0, s * 0.5, s * 0.38, s * 0.3);
+    glow.addColorStop(0, 'rgba(255, 190, 80, 0.6)');
+    glow.addColorStop(1, 'rgba(255, 110, 30, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, s, s);
+    // handle and wrapped head
     ctx.fillStyle = '#A8743D';
-    ctx.fillRect(-s * 0.04, -s * 0.1, s * 0.08, s * 0.36);
-    ctx.fillStyle = '#C9A46A';
-    ctx.fillRect(-s * 0.08, -s * 0.24, s * 0.16, s * 0.15);
-    ctx.restore();
+    ctx.fillRect(s * 0.46, s * 0.5, s * 0.08, s * 0.3);
+    ctx.fillStyle = '#5A3A22';
+    ctx.fillRect(s * 0.42, s * 0.45, s * 0.16, s * 0.09);
+    // flame
+    const tear = (w, h, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, s * (0.46 - h));
+      ctx.bezierCurveTo(s * (0.5 + w), s * (0.46 - h * 0.45), s * (0.5 + w), s * 0.46, s * 0.5, s * 0.46);
+      ctx.bezierCurveTo(s * (0.5 - w), s * 0.46, s * (0.5 - w), s * (0.46 - h * 0.45), s * 0.5, s * (0.46 - h));
+      ctx.fill();
+    };
+    tear(0.13, 0.3, '#FF8A2A');
+    tear(0.07, 0.18, '#FFF0B0');
   },
   [B.PICKAXE]: (ctx, s) => {
     block(ctx, s, ...SOIL);

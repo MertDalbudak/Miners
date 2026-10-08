@@ -6,6 +6,7 @@ import { B, blockInfo, Dig } from '../src/game/blocks.js';
 import { GameConfig } from '../src/config.js';
 
 const S = GameConfig.SURFACE_ROWS;
+const X = GameConfig.START_COL;
 
 function newGame(options = {}) {
   const game = new Game({ seed: 4242, ...options });
@@ -22,9 +23,16 @@ function set(game, c, r, type, hp = 1, variant = 0) {
   game.grid.set(c, r, type, hp, variant);
 }
 
+// Plain dirt around the start so scenarios don't depend on the generated level
+function clearArea(game, rows = 8) {
+  for (let r = S; r < S + rows; r++) {
+    for (let c = X - 3; c <= X + 3; c++) set(game, c, r, B.DIRT);
+  }
+}
+
 // Dig straight down from the surface into row S (first underground row)
 function enter(game) {
-  set(game, 4, S + 1, B.DIRT);
+  set(game, X, S + 1, B.DIRT);
   game.act('down');
   tick(game, 0.2);
   assert.equal(game.player.r, S);
@@ -36,8 +44,8 @@ test('digging dirt costs energy, ores restore it', () => {
   enter(game);
   assert.equal(game.player.energy, start - 1);
 
-  set(game, 4, S + 1, B.COAL);
-  set(game, 4, S + 2, B.DIRT);
+  set(game, X, S + 1, B.COAL);
+  set(game, X, S + 2, B.DIRT);
   game.act('down');
   tick(game, 0.2);
   assert.equal(game.player.energy, start - 1 + 2);
@@ -54,17 +62,19 @@ test('the miner cannot leave the shaft or move up', () => {
 
 test('TNT kills, a hard hat absorbs the blast', () => {
   const game = newGame();
+  clearArea(game);
   enter(game);
-  set(game, 4, S + 1, B.TNT);
+  set(game, X, S + 1, B.TNT);
   game.act('down');
   assert.equal(game.state, 'dead');
   assert.equal(game.deathCause, 'tnt');
 
   const lucky = newGame();
+  clearArea(lucky);
   enter(lucky);
   lucky.player.shield = true;
-  set(lucky, 4, S + 1, B.TNT);
-  set(lucky, 4, S + 3, B.DIRT);
+  set(lucky, X, S + 1, B.TNT);
+  set(lucky, X, S + 3, B.DIRT);
   lucky.act('down');
   assert.equal(lucky.state, 'playing');
   assert.equal(lucky.player.shield, false);
@@ -75,22 +85,22 @@ test('TNT kills, a hard hat absorbs the blast', () => {
 test('stone needs a pickaxe, reinforced stone needs two hits', () => {
   const game = newGame();
   enter(game);
-  set(game, 4, S + 1, B.STONE);
-  set(game, 3, S, B.DIRT);
+  set(game, X, S + 1, B.STONE);
+  set(game, X - 1, S, B.DIRT);
   game.act('down');
   tick(game, 0.2);
   assert.equal(game.player.r, S, 'blocked without pickaxe');
 
   game.player.pickaxes = 1;
-  set(game, 4, S + 2, B.DIRT);
+  set(game, X, S + 2, B.DIRT);
   game.act('down');
   tick(game, 0.2);
   assert.equal(game.player.r, S + 1);
   assert.equal(game.player.pickaxes, 0);
 
   game.player.pickaxes = 2;
-  set(game, 4, S + 2, B.HARDSTONE, 2);
-  set(game, 4, S + 3, B.DIRT);
+  set(game, X, S + 2, B.HARDSTONE, 2);
+  set(game, X, S + 3, B.DIRT);
   game.act('down');
   tick(game, 0.2);
   assert.equal(game.player.r, S + 1, 'first hit only cracks it');
@@ -103,9 +113,9 @@ test('out of energy with only dirt around means exhaustion', () => {
   const game = newGame();
   enter(game);
   game.player.energy = 0;
-  set(game, 3, S, B.DIRT);
-  set(game, 5, S, B.DIRT);
-  set(game, 4, S + 1, B.DIRT);
+  set(game, X - 1, S, B.DIRT);
+  set(game, X + 1, S, B.DIRT);
+  set(game, X, S + 1, B.DIRT);
   game.act('down');
   assert.equal(game.state, 'dead');
   assert.equal(game.deathCause, 'exhausted');
@@ -113,9 +123,9 @@ test('out of energy with only dirt around means exhaustion', () => {
 
 test('surrounded by stone without a pickaxe means trapped', () => {
   const game = newGame();
-  set(game, 3, S, B.STONE);
-  set(game, 5, S, B.STONE);
-  set(game, 4, S + 1, B.STONE);
+  set(game, X - 1, S, B.STONE);
+  set(game, X + 1, S, B.STONE);
+  set(game, X, S + 1, B.STONE);
   game.act('down');
   assert.equal(game.state, 'dead');
   assert.equal(game.deathCause, 'trapped');
@@ -125,8 +135,8 @@ test('pacing in an empty pocket without energy still ends the run', () => {
   const game = newGame();
   enter(game);
   // miner at (4, S) with an empty cell to the right, dirt everywhere else
-  set(game, 5, S, B.EMPTY);
-  for (const [c, r] of [[3, S], [6, S], [4, S + 1], [5, S + 1]]) set(game, c, r, B.DIRT);
+  set(game, X + 1, S, B.EMPTY);
+  for (const [c, r] of [[X - 1, S], [X + 2, S], [X, S + 1], [X + 1, S + 1]]) set(game, c, r, B.DIRT);
   game.player.energy = 0;
   game.act('right');
   assert.equal(game.state, 'dead');
@@ -136,10 +146,10 @@ test('pacing in an empty pocket without energy still ends the run', () => {
 test('an ore at the end of an open tunnel keeps the run alive', () => {
   const game = newGame();
   enter(game);
-  set(game, 5, S, B.EMPTY);
-  set(game, 6, S, B.EMPTY);
-  set(game, 7, S, B.COAL);
-  for (const [c, r] of [[3, S], [4, S + 1], [5, S + 1], [6, S + 1], [7, S + 1]]) set(game, c, r, B.DIRT);
+  set(game, X + 1, S, B.EMPTY);
+  set(game, X + 2, S, B.EMPTY);
+  set(game, X + 3, S, B.COAL);
+  for (const [c, r] of [[X - 1, S], [X, S + 1], [X + 1, S + 1], [X + 2, S + 1], [X + 3, S + 1]]) set(game, c, r, B.DIRT);
   game.player.energy = 0;
   game.act('right');
   assert.equal(game.state, 'playing');
@@ -147,9 +157,9 @@ test('an ore at the end of an open tunnel keeps the run alive', () => {
 
 test('gravity pulls the miner through empty space', () => {
   const game = newGame();
-  set(game, 4, S + 1, B.EMPTY);
-  set(game, 4, S + 2, B.EMPTY);
-  set(game, 4, S + 3, B.DIRT);
+  set(game, X, S + 1, B.EMPTY);
+  set(game, X, S + 2, B.EMPTY);
+  set(game, X, S + 3, B.DIRT);
   game.act('down');
   tick(game, 1);
   assert.equal(game.player.r, S + 2);
@@ -159,20 +169,20 @@ test('gravity pulls the miner through empty space', () => {
 test('a boulder falls when undermined and crushes the miner', () => {
   const game = newGame();
   enter(game);
-  set(game, 5, S, B.BOULDER);
+  set(game, X + 1, S, B.BOULDER);
   for (const r of [S + 1, S + 2]) {
-    set(game, 4, r, B.DIRT);
-    set(game, 5, r, B.DIRT);
-    set(game, 6, r, B.DIRT);
+    set(game, X, r, B.DIRT);
+    set(game, X + 1, r, B.DIRT);
+    set(game, X + 2, r, B.DIRT);
   }
-  set(game, 5, S + 3, B.DIRT);
+  set(game, X + 1, S + 3, B.DIRT);
   game.player.energy = 20;
 
   game.act('down'); // 4, S+1
   tick(game, 0.2);
   game.act('right'); // 5, S+1 directly under the boulder
   tick(game, 0.3);
-  assert.equal(game.grid.get(5, S), B.BOULDER, 'miner holds the boulder up');
+  assert.equal(game.grid.get(X + 1, S), B.BOULDER, 'miner holds the boulder up');
   game.act('down'); // 5, S+2 - boulder loses support
   tick(game, 1.5);
   assert.equal(game.state, 'dead');
@@ -182,14 +192,14 @@ test('a boulder falls when undermined and crushes the miner', () => {
 test('stepping aside lets the boulder drop past', () => {
   const game = newGame();
   enter(game);
-  set(game, 5, S, B.BOULDER);
+  set(game, X + 1, S, B.BOULDER);
   for (const r of [S + 1, S + 2]) {
-    set(game, 4, r, B.DIRT);
-    set(game, 5, r, B.DIRT);
-    set(game, 6, r, B.DIRT);
+    set(game, X, r, B.DIRT);
+    set(game, X + 1, r, B.DIRT);
+    set(game, X + 2, r, B.DIRT);
   }
-  set(game, 5, S + 3, B.DIRT);
-  set(game, 6, S + 3, B.DIRT);
+  set(game, X + 1, S + 3, B.DIRT);
+  set(game, X + 2, S + 3, B.DIRT);
   game.player.energy = 20;
 
   game.act('down');
@@ -201,31 +211,31 @@ test('stepping aside lets the boulder drop past', () => {
   game.act('right'); // escape to 6, S+2
   tick(game, 1.5);
   assert.equal(game.state, 'playing');
-  assert.equal(game.grid.get(5, S + 2), B.BOULDER, 'boulder came to rest in the old spot');
+  assert.equal(game.grid.get(X + 1, S + 2), B.BOULDER, 'boulder came to rest in the old spot');
 });
 
 test('a falling boulder is solid - the miner cannot step into it', () => {
   const game = newGame();
   enter(game);
   // miner at (4, S+1) next to an empty column under a boulder
-  set(game, 4, S + 1, B.EMPTY);
-  set(game, 4, S + 2, B.DIRT);
+  set(game, X, S + 1, B.EMPTY);
+  set(game, X, S + 2, B.DIRT);
   game.player.r = S + 1;
-  set(game, 5, S, B.BOULDER);
-  set(game, 5, S + 1, B.EMPTY);
-  set(game, 5, S + 2, B.EMPTY);
-  set(game, 5, S + 3, B.DIRT);
+  set(game, X + 1, S, B.BOULDER);
+  set(game, X + 1, S + 1, B.EMPTY);
+  set(game, X + 1, S + 2, B.EMPTY);
+  set(game, X + 1, S + 3, B.DIRT);
   let t = 0;
-  while (!game.boulderAt(5, S + 1) && t < 3) {
+  while (!game.boulderAt(X + 1, S + 1) && t < 3) {
     game.update(1 / 60);
     t += 1 / 60;
   }
-  assert.ok(game.boulderAt(5, S + 1), 'boulder is falling past the miner');
+  assert.ok(game.boulderAt(X + 1, S + 1), 'boulder is falling past the miner');
   game.cooldown = 0;
   assert.equal(game.act('right'), false);
-  assert.equal(game.player.c, 4);
+  assert.equal(game.player.c, X);
   tick(game, 1);
-  assert.equal(game.grid.get(5, S + 2), B.BOULDER);
+  assert.equal(game.grid.get(X + 1, S + 2), B.BOULDER);
   assert.equal(game.grid.get(game.player.c, game.player.r), B.EMPTY);
 });
 
@@ -233,12 +243,12 @@ test('monsters wake up, hunt through open space and kill on contact', () => {
   const game = newGame();
   enter(game);
   // open corridor to the right of the miner
-  for (let c = 5; c < 9; c++) set(game, c, S, B.EMPTY);
-  set(game, 5, S + 1, B.DIRT);
-  set(game, 6, S + 1, B.DIRT);
-  set(game, 7, S + 1, B.DIRT);
-  set(game, 8, S + 1, B.DIRT);
-  const m = new Monster(1, 8, S, 'crawler');
+  for (let c = X + 1; c < X + 5; c++) set(game, c, S, B.EMPTY);
+  set(game, X + 1, S + 1, B.DIRT);
+  set(game, X + 2, S + 1, B.DIRT);
+  set(game, X + 3, S + 1, B.DIRT);
+  set(game, X + 4, S + 1, B.DIRT);
+  const m = new Monster(1, X + 4, S, 'crawler');
   game.monsters.push(m);
   tick(game, 4);
   assert.equal(game.state, 'dead');
@@ -249,9 +259,9 @@ test('a hard hat bonks a monster', () => {
   const game = newGame();
   enter(game);
   game.player.shield = true;
-  for (let c = 5; c < 9; c++) set(game, c, S, B.EMPTY);
-  for (let c = 5; c < 9; c++) set(game, c, S + 1, B.DIRT);
-  game.monsters.push(new Monster(1, 7, S, 'crawler'));
+  for (let c = X + 1; c < X + 5; c++) set(game, c, S, B.EMPTY);
+  for (let c = X + 1; c < X + 5; c++) set(game, c, S + 1, B.DIRT);
+  game.monsters.push(new Monster(1, X + 3, S, 'crawler'));
   tick(game, 4);
   assert.equal(game.state, 'playing');
   assert.equal(game.player.shield, false);
@@ -317,8 +327,8 @@ test('a flare does not cut a torch reveal short', () => {
 test('quick ore streaks build a combo multiplier', () => {
   const game = newGame();
   enter(game);
-  for (let i = 1; i <= 4; i++) set(game, 4, S + i, B.IRON);
-  set(game, 4, S + 5, B.DIRT);
+  for (let i = 1; i <= 4; i++) set(game, X, S + i, B.IRON);
+  set(game, X, S + 5, B.DIRT);
   for (let i = 0; i < 4; i++) {
     game.act('down');
     tick(game, 0.2);
@@ -329,11 +339,12 @@ test('quick ore streaks build a combo multiplier', () => {
 
 test('TNT chain reactions', () => {
   const game = newGame();
+  clearArea(game);
   enter(game);
   game.player.shield = true;
-  set(game, 4, S + 1, B.TNT);
-  set(game, 4, S + 2, B.TNT);
-  set(game, 4, S + 4, B.DIRT);
+  set(game, X, S + 1, B.TNT);
+  set(game, X, S + 2, B.TNT);
+  set(game, X, S + 4, B.DIRT);
   game.act('down');
   tick(game, 1);
   assert.equal(game.stats.chainReactions, 1);

@@ -327,6 +327,39 @@ function orientOutward(g) {
   return g;
 }
 
+// Surface of revolution around +y from a list of [radius, y] points
+export function lathe(profile, segments = 14) {
+  const g = geo();
+  for (let i = 0; i < profile.length; i++) {
+    const [rad, y] = profile[i];
+    for (let j = 0; j <= segments; j++) {
+      const a = (j / segments) * Math.PI * 2;
+      g.positions.push(Math.cos(a) * rad, y, Math.sin(a) * rad);
+      g.normals.push(Math.cos(a), 0, Math.sin(a));
+      g.uvs.push(j / segments, i / (profile.length - 1));
+    }
+  }
+  for (let i = 0; i < profile.length - 1; i++) {
+    for (let j = 0; j < segments; j++) {
+      const a = i * (segments + 1) + j;
+      const b = a + segments + 1;
+      g.indices.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  return g;
+}
+
+// Teardrop: round at the bottom, pointed at the top
+export function teardrop(radius, height, rings = 10, segments = 14) {
+  const profile = [];
+  for (let i = 0; i <= rings; i++) {
+    const t = i / rings;
+    const r = t < 0.32 ? Math.sin((t / 0.32) * Math.PI / 2) : Math.pow((1 - t) / 0.68, 1.3);
+    profile.push([radius * r, height * t]);
+  }
+  return lathe(profile, segments);
+}
+
 // Low-poly cone-ish shape used for pine trees and mountains
 export function lowCone(radius, height, sides = 7, seed = 1, jitter = 0.15) {
   const rng = new Rng(seed);

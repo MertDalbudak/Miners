@@ -118,21 +118,24 @@ export class Surface {
   buildHeadframe() {
     const wood = this.geo('darkwood');
     const z = -1.6;
-    // A-frame legs
+    // A-frame legs straddling the shaft
+    const base = GameConfig.COLS * 0.4;
+    const top = 1.15;
+    const legX = y => base + (top - base) * (y / 6.2);
     for (const s of [-1, 1]) {
-      const x0 = s * 3.4;
-      const x1 = s * 1.0;
+      const x0 = s * base;
+      const x1 = s * top;
       const len = Math.hypot(x1 - x0, 6.2);
       const ang = (Math.atan2(x1 - x0, 6.2) * 180) / Math.PI;
       for (const dz of [-0.6, 0.6]) {
         append(wood, boxUV(0.13, len / 2, 0.13, 1), trs((x0 + x1) / 2, 3.1, z + dz, 0, 0, -ang));
       }
       // cross braces
-      append(wood, boxUV(0.07, 0.07, 0.7, 1), trs(s * 2.65, 2.0, z));
-      append(wood, boxUV(0.07, 0.07, 0.7, 1), trs(s * 1.85, 4.0, z));
+      append(wood, boxUV(0.07, 0.07, 0.7, 1), trs(s * legX(2.0), 2.0, z));
+      append(wood, boxUV(0.07, 0.07, 0.7, 1), trs(s * legX(4.0), 4.0, z));
     }
-    append(wood, boxUV(2.75, 0.08, 0.08, 1), trs(0, 1.6, z + 0.6));
-    append(wood, boxUV(2.05, 0.08, 0.08, 1), trs(0, 3.4, z + 0.6));
+    append(wood, boxUV(legX(1.6) - 0.06, 0.08, 0.08, 1), trs(0, 1.6, z + 0.6));
+    append(wood, boxUV(legX(3.4) - 0.06, 0.08, 0.08, 1), trs(0, 3.4, z + 0.6));
     // Top platform
     append(wood, boxUV(1.5, 0.1, 0.8, 1), trs(0, 6.25, z));
     // Back stay
@@ -174,13 +177,13 @@ export class Surface {
     const sleepers = this.geo('darkwood');
     const z = -1.1;
     for (const dz of [-0.32, 0.32]) {
-      append(metal, prim.box(6, 0.03, 0.035), trs(11, 0.08, z + dz));
+      append(metal, prim.box(6, 0.03, 0.035), trs(13, 0.08, z + dz));
     }
-    for (let x = 5.4; x < 17; x += 0.8) {
+    for (let x = 7.4; x < 19; x += 0.8) {
       append(sleepers, boxUV(0.12, 0.04, 0.5, 1), trs(x, 0.03, z));
     }
     const cart = this.geo('rust');
-    const cx = 7.8;
+    const cx = 9.6;
     append(cart, prim.box(0.75, 0.32, 0.45), trs(cx, 0.62, z));
     append(cart, prim.box(0.8, 0.05, 0.5), trs(cx, 0.96, z));
     const wheels = this.geo('darkmetal');
@@ -198,7 +201,7 @@ export class Surface {
 
   buildShack() {
     const wood = this.geo('wood');
-    const x = -9.5;
+    const x = -10.5;
     const z = -4;
     append(wood, boxUV(1.7, 1.1, 1.4, 0.5), trs(x, 1.1, z));
     const roof = this.geo('roof');
@@ -231,9 +234,9 @@ export class Surface {
       append(hoops, prim.torus(0.02, 0.305, 16, 4), trs(bx, 0.6, bz));
     }
     // lamp post by the shaft
-    append(this.geo('darkwood'), boxUV(0.06, 1.1, 0.06, 1), trs(-5.6, 1.1, -0.4));
-    append(this.geo('darkwood'), boxUV(0.3, 0.04, 0.04, 1), trs(-5.4, 2.15, -0.4));
-    append(this.geo('lanternGlass'), prim.cylinder(0.1, 0.26, 8), trs(-5.15, 1.9, -0.4));
+    append(this.geo('darkwood'), boxUV(0.06, 1.1, 0.06, 1), trs(-6.6, 1.1, -0.4));
+    append(this.geo('darkwood'), boxUV(0.3, 0.04, 0.04, 1), trs(-6.4, 2.15, -0.4));
+    append(this.geo('lanternGlass'), prim.cylinder(0.1, 0.26, 8), trs(-6.15, 1.9, -0.4));
   }
 
   buildTrees(rng) {
@@ -242,9 +245,9 @@ export class Surface {
     for (let i = 0; i < 400 && placed < 70; i++) {
       const x = rng.float(-60, 60);
       const z = -rng.float(5, 70);
-      if (Math.abs(x) < 7 && z > -12) continue;
-      if (x < -6 && x > -13.5 && z > -7.5) continue;
-      if (x > 4.5 && x < 17.5 && z > -3) continue;
+      if (Math.abs(x) < 8 && z > -12) continue;
+      if (x < -7 && x > -14.5 && z > -7.5) continue;
+      if (x > 5.5 && x < 19.5 && z > -3) continue;
       placed++;
       const scale = rng.float(0.8, 1.5) * (1 + -z / 60);
       if (rng.chance(0.45)) {
