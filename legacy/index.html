@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#1a0a00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Miners">
+  <meta name="application-name" content="Miners">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Miners - A mining adventure game. Dig deep, collect ores, avoid monsters, and reach the highest score!">
+  <meta name="keywords" content="miners, mining game, arcade game, puzzle game, mobile game">
+  <meta name="author" content="Mert Dalbudak">
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Miners">
+  <meta property="og:description" content="A mining adventure game. Dig deep, collect ores, avoid monsters!">
+  <meta property="og:image" content="image_source/icon-512.png">
+
+  <!-- Icons -->
+  <link rel="icon" href="image_source/icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="image_source/icon.png">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <title>Miners</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      height: 100svh;
+      overflow: hidden;
+      background-color: #1a0a00;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Mobile/PWA: use full screen */
+    @media (max-width: 768px), (pointer: coarse), (display-mode: standalone), (display-mode: fullscreen) {
+      html, body {
+        height: 100vh;
+        height: 100dvh;
+        height: -webkit-fill-available;
+      }
+      body {
+        align-items: flex-start;
+        min-height: 100vh;
+        min-height: 100dvh;
+        min-height: -webkit-fill-available;
+      }
+    }
+
+    #world {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background-color: #1a0a00;
+    }
+
+    #canvas {
+      display: block;
+      touch-action: none;
+    }
+
+    #gems {
+      display: none;
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: #FFCE4B;
+      font-size: clamp(18px, 4vw, 30px);
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+    }
+
+    #gems::before {
+      content: '';
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      background-image: url('image_source/gem.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    /* PWA mode: extra top padding for gems counter */
+    @media (display-mode: standalone), (display-mode: fullscreen) {
+      #gems {
+        top: 40px;
+      }
+    }
+
+    /* Touch Controls UI */
+    #touch-controls {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    #touch-controls.visible {
+      display: flex;
+    }
+
+    .touch-btn {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(255, 206, 75, 0.3);
+      border: 3px solid rgba(255, 206, 75, 0.6);
+      color: #FFCE4B;
+      font-size: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    .touch-btn:active {
+      background: rgba(255, 206, 75, 0.5);
+      transform: scale(0.95);
+    }
+
+    .touch-btn svg {
+      width: 32px;
+      height: 32px;
+      fill: #FFCE4B;
+    }
+
+    /* Responsive adjustments for smaller screens */
+    @media (max-width: 400px) {
+      .touch-btn {
+        width: 60px;
+        height: 60px;
+      }
+      .touch-btn svg {
+        width: 26px;
+        height: 26px;
+      }
+    }
+
+    /* Safe area padding for notched devices */
+    @supports (padding: max(0px)) {
+      #touch-controls {
+        bottom: max(20px, env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #1a0a00 0%, #2d1a0a 50%, #1a0a00 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease-out;
+    }
+
+    #loading-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loading-screen.hidden {
+      display: none;
+    }
+
+    .loading-title {
+      color: #FFCE4B;
+      font-family: Impact, Charcoal, sans-serif;
+      font-size: clamp(36px, 8vw, 64px);
+      text-shadow: 0 0 20px rgba(255, 206, 75, 0.5), 2px 2px 4px rgba(0, 0, 0, 0.8);
+      margin-bottom: 30px;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 206, 75, 0.2);
+      border-top-color: #FFCE4B;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #888;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+
+    /* Pause button */
+    #btn-pause {
+      display: none;
+      position: fixed;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(255, 206, 75, 0.3);
+      border: 2px solid rgba(255, 206, 75, 0.6);
+      color: #FFCE4B;
+      cursor: pointer;
+      z-index: 100;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    #btn-pause.visible {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #btn-pause:active {
+      background: rgba(255, 206, 75, 0.5);
+      transform: translateX(-50%) scale(0.95);
+    }
+
+    #btn-pause svg {
+      width: 24px;
+      height: 24px;
+      fill: #FFCE4B;
+    }
+
+    @supports (padding: max(0px)) {
+      #btn-pause {
+        top: max(15px, env(safe-area-inset-top));
+      }
+    }
+  </style>
+</head>
+<body onload="game()">
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-title">MINERS</div>
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+
+  <div id="world">
+    <canvas id="canvas">
+      Your browser does not support canvas. Please update your browser.
+    </canvas>
+    <span id="gems">...</span>
+  </div>
+
+  <!-- Hidden input for mobile keyboard -->
+  <input type="text" id="name-input"
+    maxlength="10"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="characters"
+    spellcheck="false"
+    style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;">
+
+  <!-- Pause Button -->
+  <button id="btn-pause" aria-label="Pause Game">
+    <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+  </button>
+
+  <!-- Touch Controls UI -->
+  <div id="touch-controls">
+    <button class="touch-btn" id="btn-left" aria-label="Move Left">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </button>
+    <button class="touch-btn" id="btn-down" aria-label="Move Down">
+      <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+    </button>
+    <button class="touch-btn" id="btn-right" aria-label="Move Right">
+      <svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+    </button>
+  </div>
+
+  <!-- Game modules -->
+  <script src="js/config.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/levelgen.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/game.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registered'))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>

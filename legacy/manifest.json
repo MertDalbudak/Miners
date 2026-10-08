@@ -1,0 +1,33 @@
+{
+  "name": "Miners",
+  "short_name": "Miners",
+  "description": "A mining adventure game. Dig deep, collect ores, avoid monsters, and reach the highest score!",
+  "start_url": "index.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#1a0a00",
+  "theme_color": "#1a0a00",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "image_source/icon.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "image_source/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "image_source/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

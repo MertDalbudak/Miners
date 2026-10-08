@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a0d05">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Miners - a 3D mining adventure. Dig deep, memorize the dark, collect ores and outsmart cave monsters.">
+  <meta name="author" content="Mert Dalbudak">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Miners">
+  <meta name="format-detection" content="telephone=no">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Miners">
+  <meta property="og:description" content="Dig deep, memorize the dark, collect ores and outsmart cave monsters.">
+  <meta property="og:image" content="icons/icon-512.png">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Miners</title>
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas" aria-label="Miners game view"></canvas>
+
+    <div id="loading" class="loading" role="status" aria-live="polite">
+      <div class="logo logo-big" aria-hidden="true">MINERS</div>
+      <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+      <div class="loading-text" id="loading-text">Preparing the mine…</div>
+    </div>
+
+    <div id="ui">
+      <!-- Title -->
+      <section id="screen-title" class="screen title-screen" aria-label="Main menu">
+        <div class="title-top">
+          <div class="pill coins-pill" data-bind="coins"></div>
+        </div>
+        <header class="title-head">
+          <h1 class="logo">MINERS</h1>
+          <p class="tagline">Dig deep. Remember the dark.</p>
+        </header>
+        <nav class="menu" aria-label="Main menu">
+          <button class="btn primary big" data-action="play"><span data-icon="play"></span>Play</button>
+          <button class="btn daily" data-action="daily"><span data-icon="calendar"></span><span class="label">Daily Dig<small data-bind="daily"></small></span></button>
+          <button class="btn" data-action="shop"><span data-icon="pickaxe"></span><span class="label">Upgrades</span><span class="badge" data-bind="shopBadge"></span></button>
+          <div class="menu-row">
+            <button class="btn small" data-action="records" aria-label="Records"><span data-icon="trophy"></span><span class="label">Records</span></button>
+            <button class="btn small" data-action="howto" aria-label="How to play"><span data-icon="info"></span><span class="label">How to</span></button>
+            <button class="btn small" data-action="settings" aria-label="Settings"><span data-icon="gear"></span><span class="label">Settings</span></button>
+          </div>
+        </nav>
+        <footer class="title-foot">
+          <span data-bind="best"></span>
+          <button class="link" data-action="about">About</button>
+        </footer>
+      </section>
+
+      <!-- In-game HUD -->
+      <div id="hud" class="hud" aria-hidden="true">
+        <div class="hud-left">
+          <div class="hud-depth"><span id="hud-depth">0</span><small>m</small></div>
+          <div class="hud-score" id="hud-score">0</div>
+          <div class="hud-combo" id="hud-combo"></div>
+        </div>
+        <button class="hud-pause" id="hud-pause" data-action="pause" aria-label="Pause"><span data-icon="pause"></span></button>
+        <div class="hud-right">
+          <div class="hud-energy" id="hud-energy-wrap"><span data-icon="energy"></span><span id="hud-energy">10</span></div>
+          <div class="hud-items">
+            <div class="hud-item" id="hud-pick" title="Pickaxes"><span data-icon="pickaxe"></span><span class="n">0</span></div>
+            <div class="hud-item" id="hud-shield" title="Hard hat"><span data-icon="shield"></span></div>
+            <div class="hud-item" id="hud-flare" title="Flares"><span data-icon="flare"></span><span class="n">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="reveal-bar" class="reveal-bar" aria-hidden="true"><i></i></div>
+
+      <div id="keyhints" class="keyhints" aria-hidden="true">
+        <span><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> dig</span>
+        <span><kbd>F</kbd> flare</span>
+        <span><kbd>Esc</kbd> pause</span>
+      </div>
+
+      <!-- On-screen controls -->
+      <div id="touch" class="touch" aria-hidden="true">
+        <div class="touch-pad">
+          <button class="tbtn" data-dir="left" aria-label="Dig left"><span data-icon="left"></span></button>
+          <button class="tbtn" data-dir="down" aria-label="Dig down"><span data-icon="down"></span></button>
+          <button class="tbtn" data-dir="right" aria-label="Dig right"><span data-icon="right"></span></button>
+        </div>
+        <button class="tbtn flare-btn" data-dir="flare" aria-label="Use flare"><span data-icon="flare"></span><span class="n" id="touch-flares">0</span></button>
+      </div>
+
+      <!-- Pause -->
+      <section id="screen-pause" class="screen modal" aria-label="Paused">
+        <div class="panel">
+          <h2>Paused</h2>
+          <div class="pause-info" id="pause-info"></div>
+          <button class="btn primary" data-action="resume"><span data-icon="play"></span>Resume</button>
+          <button class="btn" data-action="restart">Restart</button>
+          <button class="btn" data-action="settings"><span data-icon="gear"></span>Settings</button>
+          <button class="btn" data-action="quit">Quit to menu</button>
+        </div>
+      </section>
+
+      <!-- Game over -->
+      <section id="screen-over" class="screen modal" aria-label="Results">
+        <div class="panel wide over-panel" id="over-panel"></div>
+      </section>
+
+      <!-- Pages -->
+      <section id="screen-shop" class="screen page" aria-label="Upgrades">
+        <header class="page-head">
+          <button class="btn icon" data-action="back" aria-label="Back"><span data-icon="back"></span></button>
+          <h2>Upgrades</h2>
+          <div class="pill coins-pill" data-bind="coins"></div>
+        </header>
+        <div class="page-body" id="shop-body"></div>
+      </section>
+
+      <section id="screen-records" class="screen page" aria-label="Records">
+        <header class="page-head">
+          <button class="btn icon" data-action="back" aria-label="Back"><span data-icon="back"></span></button>
+          <h2>Records</h2>
+          <div class="spacer"></div>
+        </header>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="scores"><span data-icon="trophy"></span>Scores</button>
+          <button class="tab" role="tab" data-tab="stats"><span data-icon="chart"></span>Stats</button>
+          <button class="tab" role="tab" data-tab="achievements"><span data-icon="star"></span>Achievements</button>
+        </div>
+        <div class="page-body" id="records-body"></div>
+      </section>
+
+      <section id="screen-settings" class="screen page" aria-label="Settings">
+        <header class="page-head">
+          <button class="btn icon" data-action="back" aria-label="Back"><span data-icon="back"></span></button>
+          <h2>Settings</h2>
+          <div class="spacer"></div>
+        </header>
+        <div class="page-body" id="settings-body"></div>
+      </section>
+
+      <section id="screen-howto" class="screen page" aria-label="How to play">
+        <header class="page-head">
+          <button class="btn icon" data-action="back" aria-label="Back"><span data-icon="back"></span></button>
+          <h2>How to play</h2>
+          <div class="spacer"></div>
+        </header>
+        <div class="page-body" id="howto-body"></div>
+      </section>
+
+      <section id="screen-about" class="screen page" aria-label="About">
+        <header class="page-head">
+          <button class="btn icon" data-action="back" aria-label="Back"><span data-icon="back"></span></button>
+          <h2>About</h2>
+          <div class="spacer"></div>
+        </header>
+        <div class="page-body" id="about-body"></div>
+      </section>
+
+      <!-- Overlays -->
+      <div id="floaters" class="floaters" aria-hidden="true"></div>
+      <div id="banner" class="banner" aria-live="polite"></div>
+      <div id="toasts" class="toasts" aria-live="polite"></div>
+      <div id="hint" class="hint" aria-live="polite"></div>
+      <div id="skip" class="skip-hint">Tap to continue</div>
+    </div>
+
+    <div id="fatal" class="fatal" hidden>
+      <div class="panel">
+        <h2>Can't start the mine</h2>
+        <p id="fatal-text">Your browser doesn't support WebGL 2, which Miners needs. Please update your browser or try another device.</p>
+      </div>
+    </div>
+  </div>
+  <noscript><p class="noscript">Miners needs JavaScript to run.</p></noscript>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
